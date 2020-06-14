@@ -31,7 +31,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr CreateData(std::vector<std::vector<float>> p
   		pcl::PointXYZ point;
   		point.x = points[i][0];
   		point.y = points[i][1];
-  		point.z = 0;
+  		point.z = points[i][2];
 
   		cloud->points.push_back(point);
 
@@ -52,7 +52,7 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 		Box upperWindow = window;
 		Box lowerWindow = window;
 		// split on x axis
-		if(depth%2==0)
+		if(depth%3==0)
 		{
 			viewer->addLine(pcl::PointXYZ(node->point[0], window.y_min, 0),pcl::PointXYZ(node->point[0], window.y_max, 0),0,0,1,"line"+std::to_string(iteration));
 			lowerWindow.x_max = node->point[0];
@@ -75,13 +75,45 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 
 }
 
-std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
+void Proximity(int Ind,const std::vector<std::vector<float>> points, std::vector<int>& cluster, std::vector<bool>& processed, KdTree* tree, float distanceTol)
+{
+
+	processed[Ind] = true;
+	cluster.push_back(Ind);
+
+	std::vector<int> nearby = tree->search(points[Ind], distanceTol);
+
+	for(int id : nearby)
+	{
+		/* code */
+		if(!processed[id])
+			Proximity(id, points, cluster, processed, tree, distanceTol);
+	}
+	
+}
+
+std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>> points, KdTree* tree, float distanceTol)
 {
 
 	// TODO: Fill out this function to return list of indices for each cluster
 
 	std::vector<std::vector<int>> clusters;
- 
+	std::vector<bool> processed(points.size(), false);
+
+	int j = 0;
+	while(j<points.size()){
+		
+		if(processed[j]){
+			j++;
+			continue;
+		}
+
+		std::vector<int> cluster;
+		Proximity(j, points, cluster,processed, tree, distanceTol);
+		clusters.push_back(cluster);
+		j++;
+	}
+
 	return clusters;
 
 }
@@ -95,13 +127,13 @@ int main ()
   	window.x_max =  10;
   	window.y_min = -10;
   	window.y_max =  10;
-  	window.z_min =   0;
-  	window.z_max =   0;
+  	window.z_min =  -10;
+  	window.z_max =  10;
 	pcl::visualization::PCLVisualizer::Ptr viewer = initScene(window, 25);
 
 	// Create data
-	std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3}, {7.2,6.1}, {8.0,5.3}, {7.2,7.1}, {0.2,-7.1}, {1.7,-6.9}, {-1.2,-7.2}, {2.2,-8.9} };
-	//std::vector<std::vector<float>> points = { {-6.2,7}, {-6.3,8.4}, {-5.2,7.1}, {-5.7,6.3} };
+	std::vector<std::vector<float>> points = { {-6.2,7,1}, {-6.3,8.4,1}, {-5.2,7.1,1}, {-5.7,6.3,1}, {7.2,6.1,1}, {8.0,5.3,1}, {7.2,7.1,1}, {0.2,-7.1,1}, {1.7,-6.9,1}, {-1.2,-7.2,1}, {2.2,-8.9,1} };
+	//std::vector<std::vector<float>> points = { {-6.2,7,1}, {-6.3,8.4,1}, {-5.2,7.1,1}, {-5.7,6.3,1} };
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = CreateData(points);
 
 	KdTree* tree = new KdTree;
@@ -113,7 +145,8 @@ int main ()
   	render2DTree(tree->root,viewer,window, it);
   
   	std::cout << "Test Search" << std::endl;
-  	std::vector<int> nearby = tree->search({-6,7},3.0);
+  	std::vector<int> nearby = tree->search({-6.0,6.5,1},3.0);
+	
   	for(int index : nearby)
       std::cout << index << ",";
   	std::cout << std::endl;
@@ -129,13 +162,14 @@ int main ()
 
   	// Render clusters
   	int clusterId = 0;
-	std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
+	std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(1,1,0)};
   	for(std::vector<int> cluster : clusters)
   	{
   		pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZ>());
   		for(int indice: cluster)
-  			clusterCloud->points.push_back(pcl::PointXYZ(points[indice][0],points[indice][1],0));
-  		renderPointCloud(viewer, clusterCloud,"cluster"+std::to_string(clusterId),colors[clusterId%3]);
+  			clusterCloud->points.push_back(pcl::PointXYZ(points[indice][0],points[indice][1],points[indice][2]));
+			//std::cout<<  "x cordinate" <<  points[indice][0] << std::endl;
+		renderPointCloud(viewer, clusterCloud,"cluster"+std::to_string(clusterId),colors[clusterId%3]);
   		++clusterId;
   	}
   	if(clusters.size()==0)
