@@ -62,3 +62,10 @@ NOTE: very old version
 [PCL Source Github](https://github.com/PointCloudLibrary/pcl)
 
 [PCL Mac Compilation Docs](http://www.pointclouds.org/documentation/tutorials/compiling_pcl_macosx.php)
+
+## Project Description
+
+Lidar Obstacle Detection project includes the following steps
+
+1. Using inbuilt PCL functions to implement Voxel Grid filtering, RANSAC segmentation and Euclidean clustering algorithms
+2. Developing the same algorithms from stratch in C++
